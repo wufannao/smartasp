@@ -1,12 +1,14 @@
 <%
 /*
- *	SmartASP Library 0.1
+ *	Data Module v0.2
+ *	of SmartASP Library 0.2
+ *
  *	http://code.google.com/p/smartasp/
  *
  *	Copyright (c) 2009 heero
  *	licensed under MIT license
  *
- *	Date: 2009-11-23
+ *	Date: 2009-11-29
  */
 
 
@@ -70,7 +72,7 @@ $.data.DbHelper.prototype = {
 	
 	/// 创建命令参数
 	/// @param {String} 参数名
-	/// @param {String|Number} 参数类型
+	/// @param {String,Number} 参数类型
 	/// 	int : 3,
 	/// 	bigint : 20,
 	/// 	smallint : 2,
@@ -87,11 +89,11 @@ $.data.DbHelper.prototype = {
 	/// @param {Mixed} 参数值
 	/// @param {Number} 参数长度限制
 	/// @param {Number} 参数方向，默认为传入
-	//		input : 1,
-	//		output : 2,
-	//		inputoutput : 3,
-	//		returnvalue : 4
-	// @return {Object} 参数对象
+	///		input : 1,
+	///		output : 2,
+	///		inputoutput : 3,
+	///		returnvalue : 4
+	/// @return {Object} 参数对象
 	createParam : function(name, type, value, size, direction) {
 		null == direction && (direction = 1);	// 默认为传入参数
 
@@ -100,19 +102,6 @@ $.data.DbHelper.prototype = {
 			throw new Error("无此参数类型：" + type);
 		}
 		return this._cmd.CreateParameter("@" + name, iType, direction, size, value);
-	},
-	
-	/// 创建命令参数并附加到命令对象
-	/// @param {String} 参数名
-	/// @param {String,Number} 参数类型
-	/// @param {Mixed} 参数值
-	/// @param {Number} 参数长度限制，默认为不限制
-	/// @param {Number} 参数方向，默认为传入
-	/// @return {Object} 参数对象
-	addParam : function(name, type, value, size, direction) {
-		var param = this.createParam(name, type, value, size, direction);
-		this._cmd.Parameters.Append(param);
-		return param;
 	},
 	
 	/// 附加命令参数
@@ -128,49 +117,53 @@ $.data.DbHelper.prototype = {
 		}
 	},
 	
-	/// 添加当前参数的副本
-	copyParams : function() {
-		var cmd = this._cmd, i = -1, params = cmd.Parameters, len = params.Count, p;
-		// 循环复制每个参数
-		while (++i < len) {
-			p = params(i);
-			params.Append(
-				cmd.CreateParameter(p.Name, p.Type, p.Direction, p.Size, p.Value)
-			);
+	/// 复制参数
+	/// @param {Object,Array} 要复制的参数
+	/// @return {Array} 原参数及其副本
+	copyParams : function(params) {
+		if (params instanceof Array === false) {
+			params = [params];
 		}
+		var len = params.length, i = -1, copy = [], p;
+		while (++i < len) {
+			p = params[i];
+			copy[i] = this._cmd.CreateParameter(p.Name, p.Type, p.Direction, p.Size, p.Value);
+		}
+
+		return params.concat(copy);
 	},
 	
 	/// 清理所有命令参数
 	clearParams : function() {
-		var params = this._cmd.Parameters
-		while (0 < params.Count) {
+		var params = this._cmd.Parameters;
+		while (params.Count > 0) {
 			params.Delete(0);
 		}
 	},
 	
 	/// 执行命令
-	/// @overload
-	/// 	@param {String} 命令文本
-	/// 	@param {Number} 命令类型，1为sql语句，4为存储过程，默认为sql语句
-	/// 	@param {Boolean} 执行命令后是否保留参数，默认为不保留
-	/// @overload
-	/// 	@param {String} 命令文本
-	/// 	@param {Boolean} 执行命令后是否保留参数，默认为保留
-	/// @return {Mixed} 执行结果
-	execute : function(text, type, isKeepParams) {
+	/// @param {String} 命令文本
+	/// @param {Object,Array} 命令参数
+	/// @param {Number} 命令类型，1为sql语句，4为存储过程，默认为sql语句
+	///	@param {Boolean} 是否请求数据
+	/// @return {RecordSet} 数据集
+	_execute : function(text, params, type, isQueryData) {
 		var result, cmd = this._cmd;
-		if ("boolean" === typeof type) {
-			isKeepParams = type;
-			type = null;
-		}
 		
 		cmd.CommandType = type != null ? type : 1; 
 		cmd.CommandText = text;
+
+		// 添加参数
+		params && this.attachParams(params);
 		
 		this._dbAccessTime++;
 		
 		try {
-			result = cmd.Execute();
+			if (isQueryData) {
+				result = cmd.Execute();
+			} else {
+				cmd.Execute();
+			}
 		} catch (e) {
 			var msg = ["执行命令 { " + text + " } 出错，参数:"], i = -1, len = cmd.Parameters.Count, p;
 			while (++i < len) {
@@ -179,29 +172,45 @@ $.data.DbHelper.prototype = {
 			}
 			throw e.addMsg(msg.join(" <br /> \r\n"));
 		} finally {
-			!isKeepParams && this.clearParams();
+			this.clearParams();
 		}
 		
-		return result;
+		if (isQueryData) { return result; }
+	},
+
+	/// 执行命令并返回记录集
+	/// @param {String} 命令文本
+	/// @param {Object,Array} 命令参数
+	/// @param {Number} 命令类型，1为sql语句，4为存储过程，默认为sql语句
+	/// @return {RecordSet} 数据集
+	executeReader : function(text, params, type) {
+		return this._execute(text, params, type, true);
 	},
 	
+	/// 执行命令，无返回结果
+	/// @param
+	///		@refer executeReader
+	executeNonQuery : function(text, params, type) {
+		return this._execute(text, params, type, false);
+	},
+
 	/// 执行命令并返回结果集合中第一行第一列的值
 	/// @param
-	/// 	@refer execute
+	///		@refer executeReader
 	/// @return {Mixed} 结果集中第一行第一列的值
-	executeScalar : function(text, type, isKeepParams) {
-		var rs = this.execute(text, type, isKeepParams), value;
+	executeScalar : function(text, params, type) {
+		var rs = this.executeReader(text, params, type), value;
 		!rs.EOF && (value = rs(0).value);
 		rs.close();
 		return value;
 	},
 
-	/// 执行命令，并返回Json数据
+	/// 执行命令并返回Json数据
 	/// @param
-	///		@refer execute
-	/// @return {Array} json对象数组
-	executeJson : function(text, type, isKeepParams) {
-		var rs = this.execute(text, type, isKeepParams), json;
+	///		@refer executeReader
+	/// @return {Array} JSON对象数组
+	executeJson : function(text, params, type) {
+		var rs = this.executeReader(text, type, isKeepParams), json;
 		return this.rsToJson(rs);
 	},
 	

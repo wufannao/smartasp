@@ -1,18 +1,20 @@
 <%@LANGUAGE="JAVASCRIPT" CODEPAGE="65001"%>
 <%
 /*
- *	SmartASP Library 0.1
+ *	Core Module v0.2
+ *	of SmartASP Library v0.2
+ *
  *	http://code.google.com/p/smartasp/
  *
  *	Copyright (c) 2009 heero
  *	licensed under MIT license
  *
- *	Date: 2009-11-24
+ *	Date: 2009-11-26
  */
 
 
 // 全局对象
-var $;
+var $, nothing;
 
 
 // 在函数中执行减少全局变量
@@ -23,26 +25,39 @@ var $;
 
 /// 获取请求参数值
 /// @param {String} 参数名
-/// @param {Number} 搜索的参数集合，0为QueryString，1为Form，省略时为不限制
+/// @param {String} 搜索的参数集合，省略时为不限制
+/// 	"get": QueryString
+/// 	"post": Form
+/// 	"serv": ServerVariables
 /// @return {String} 参数值
-$ = function(name, method) {
+$ = function(name, subset) {
 	var value;
-	if (0 == method) {
-		value = Request.QueryString(name);
-	} else if (1 == method) {
-		value = Request.Form(name);
+	if (!subset) {
+		value = Request(name);		
 	} else {
-		value = Request(name);
+		switch (subset.toLowerCase()) {
+			case "get":
+				value = Request.QueryString(name);
+			break;
+			
+			case "post":
+				value = Request.Form(name);
+			break;
+			
+			case "serv":
+				value = Request.ServerVariables(name);
+			break;
+		}
 	}
-	value = String(value);
-	return "undefined" === value ? "" : value.trim();
+	
+	return value === nothing || value.Item === nothing ? "" : value.Item.trim();
 };
 
 /// 获取客户端IP
 /// @return {String} IP
 $.getIp = function() {
-	var proxy = String(Request.ServerVariables("HTTP_X_FORWARDED_FOR")),
-		ip = proxy && proxy.indexOf("unknown") != -1 ? proxy.split(/,;/g)[0] : String(Request.ServerVariables("REMOTE_ADDR"));
+	var proxy = $("HTTP_X_FORWARDED_FOR", "serv"),
+		ip = proxy && proxy.indexOf("unknown") != -1 ? proxy.split(/,;/g)[0] : $("REMOTE_ADDR", "serv");
 		
 	ip = ip.trim().substring(0, 15);
 	return "::1" === ip ? "127.0.0.1" : ip;
@@ -52,13 +67,13 @@ $.getIp = function() {
 
 
 /// 标识版本
-$.version = "0.1 Build 20091124";
+$.version = "0.2 Build 20091126";
 
 
 /// 配置对象
 $.config = {
 	prefix : "SmartASP_",	// 应用程序前缀
-	isDebug : false			// 是否调试模式
+	isDebug : true			// 是否调试模式
 };
 
   
@@ -92,19 +107,19 @@ String.prototype.right = function(n) {
 /// 获取当前字符串的数字类型值
 /// @return {Number} 当前字符串的数字类型值
 String.prototype.toNumber = function() {
-	return $.convert.toNumber(this);
+	return Number(this);
 };
 
 /// 获取当前字符串的整型值
 /// @return {Number} 当前字符串的整型值
 String.prototype.toInt = function() {
-	return $.convert.toInt(this);
+	return parseInt(this);
 };
 
 /// 获取当前字符串的浮点值
 /// @return {Number} 当前字符串的浮点值
 String.prototype.toFloat = function() {
-	return $.convert.toFloat(this);
+	return parseFloat(this);
 };
 
 /// 获取当前字符串的布尔值
@@ -115,8 +130,8 @@ String.prototype.toBool = function() {
 
 /// 获取当前字符串的日期值
 /// @return {Date} 当前字符串的日期值
-String.prototype.toDateTime = function() {
-	return $.convert.toDateTime(this);
+String.prototype.toDate = function() {
+	return $.convert.toDate(this);
 };
 
 // ---------------------------------------------------------------- */
@@ -126,9 +141,7 @@ String.prototype.toDateTime = function() {
 // Date扩展
 
 // 把数字转换成两位数的字符串
-function toTwoDigit(num) {
-	return num < 10 ? "0" + num : num;
-}
+function toTwoDigit(num) { return num < 10 ? "0" + num : num; }
 
 // 临时记录正在转换的日期
 var tempYear, tempMonth, tempDate, tempHour, tempMinute, tempSecond;
@@ -194,30 +207,6 @@ var reFalse = /^false$/i,		// 匹配字符串false(不分大小写)
 /// 类型转换对象
 $.convert = {
 	
-	/// 把值转换为数字类型
-	/// @param {Mixed} 值
-	/// @return {Number} 转换后的数字，如果该值无法转换为数字，则返回0
-	toNumber : function(value) {
-		value = Number(value);
-		return isNaN(value) ? 0 : value;
-	},
-	
-	/// 把值转换为整数类型
-	/// @param {Mixed} 值
-	/// @return {Number} 转换后的整数，如果该值无法转换为整数，则返回0
-	toInt : function(value) {
-		value = parseInt(value);
-		return isNaN(value) ? 0 : value;
-	},
-	
-	/// 把值转换为浮点数类型
-	/// @param {Mixed} 值
-	/// @return {Number} 转换后的浮点数，如果该值无法转换为浮点数，则返回0
-	toFloat : function(value) {
-		value = parseFloat(value);
-		return isNaN(value) ? 0 : value;
-	},
-	
 	/// 把字符串转换为布尔值
 	/// @param {Mixed} 值
 	/// @return {Number} 转换后的布尔值
@@ -228,7 +217,7 @@ $.convert = {
 	/// 把字符串转换为日期类型
 	/// @param {String} 字符串，格式为yyyy-MM-dd HH:mm:ss。
 	/// @return 转换后的日期，如果该字符串无法转换为日期或日期不合法，则返回undefined
-	toDateTime : function(value) {
+	toDate : function(value) {
 		if (reDateTime.test(value)) {
 			var year = parseInt(RegExp.$1), month = parseInt(RegExp.$2), day = RegExp.$3;
 				hour = RegExp.$4, minute = RegExp.$5, second = RegExp.$6;
@@ -362,48 +351,42 @@ $.json = {
 // ----------------------------------------------------------------
 // 缓存处理
 
-/// 缓存操作类
+/// 缓存操作
 $.cache = {
 	
-	/// 设置值类型缓存
+	/// 设置缓存
 	/// @param {String} 缓存名
 	/// @param {Mixed} 缓存值
-	addValue : function(name, value) {
+	/// @param {Boolean} 是否存储为JSON字符串，默认为否；如果缓存的变量是引用类型，请设为true
+	set : function(name, value, isToSerialize) {
+		if (isToSerialize) {
+			value = $.json.stringify(value);
+		}
 		Application.Lock();
 		Application($.config.prefix + name) = value;
 		Application.UnLock();
 	},
-		
-	/// 设置对象类型缓存
-	/// @param {String} 缓存名
-	/// @param {Mixed} 缓存对象
-	addObject : function(name, obj) {
-		$.cache.addValue(name, $.json.stringify(obj));
-	},
 	
-	/// 获取值类型缓存
+	/// 获取缓存值
 	/// @param {String} 缓存名
+	/// @param {Boolean} 是否把值反序列化，默认为否；如果缓存的是JSON字符串，可以设为true以获取对应的值
 	/// @return {String} 缓存值
-	getValue : function(name) {
-		var value = String(Application($.config.prefix + name));
-		return "undefined" === value ? "" : value;
-	},
-	
-	/// 获取对象类型缓存
-	/// @param {String} 缓存名
-	/// @return {Mixed} 缓存对象
-	getObject : function(name) {
-		return $.json.parse($.cache.getValue(name));
+	get : function(name, isToDeserialize) {
+		var value = Application($.config.prefix + name);
+		if (isToDeserialize && value !== nothing) {
+			value = $.json.parse(value);
+		}
+		return value;
 	},
 	
 	/// 清理缓存
 	/// @param {String} 缓存名，省略时为清理全部
 	del : function(name) {
 		Application.Lock();
-		if (null == name || "" == name) {
-			Application.Contents.RemoveAll();
-		} else {
+		if (name) {
 			Application.Contents.Remove($.config.prefix + name);
+		} else {
+			Application.Contents.RemoveAll();
 		}
 		Application.UnLock();
 	}
@@ -413,20 +396,132 @@ $.cache = {
 
 
 // ----------------------------------------------------------------
-// 验证
+// Cookie
 
-var reNumbers = /^\d+(?:\s*\,\s*\d+)*$/;	// 匹配一个或多个数字
+// Cookie过期时间格式
+var EXPIRESWITHUNIT = /[smhdMy]$/,
+	TIMEUNITS = {
+		"s" : 1,
+		"m" : 60,
+		"h" : 60 * 60,
+		"d" : 24 * 60 * 60,
+		"M" : 30 * 24 * 60 * 60,
+		"y" : 365 * 24 * 60 * 60
+	};
 
-/// 验证对象
-$.validate = {
+/// Cookie操作
+$.cookie = {
 	
-	/// 验证指定值是否用逗号隔开的一段非负整数
-	/// @param {Mixed} 值
-	/// @return {Boolean} 是否符合条件
-	isNumbers : function(value) {
-		return reNumbers.test(value);
+	/// 获取Cookie
+	/// @param {String} Cookie名
+	/// @return {String,Object} Cookie值或Cookie字典
+	get : function(name) {
+		var cookie = Request.Cookies($.config.prefix + name), value;	
+		if (cookie.HasKeys) {
+			value = {};
+			for (var i = 1, len = cookie.Count; i <= len; i++) {
+				value[cookie.Key(i)] = cookie.Item(i).trim();
+			}
+			return value;
+		} else {
+			return cookie.Item.trim();
+		}
+	},
+
+	/// 设置Cookie
+	/// @param {String} Cookie名
+	/// @param {Mixed} Cookie值
+	/// @param {Number,Date,String} 过期时间，可带单位：
+	///		y: 年
+	/// 	M: 月
+	///		d: 日
+	///		h: 小时
+	///		m: 月
+	///		s: 秒
+	/// @param {String} 域
+	/// @param {String} 路径
+	/// @param {Boolean} 是否仅把Cookie发送给受保护的服务器(https)
+	set : function(name, value, expires, domain, path, secure) {
+		name = $.config.prefix + name;
+
+		if ("string" === typeof value) {
+			Response.Cookies(name) = value;
+		} else {
+			for (var i in value) {
+				if (Object.hasOwnProperty.call(value, i)) {
+					Response.Cookies(name)(i) = value[i];
+				}
+			}
+		}
+		
+		if (expires) {
+			var date, unit;
+			if (expires instanceof Date) {
+				date = expires;
+			} else {
+				if ("string" === typeof expires && EXPIRESWITHUNIT.test(expires)) {
+					expires = expires.substring(0, expires.length - 1);
+					unit = RegExp.lastMatch;
+				}
+				if (!isNaN(expires)) {
+					date = new Date();
+					date.setTime(date.getTime() + expires * TIMEUNITS[unit || "m"] * 1000);
+				}
+			}
+			
+			date && (Response.Cookies(name).Expires = date.format("M/d/yyyy H:m:s"));
+		}
+
+		domain && (Response.Cookies(name).Domain = domain);
+		path && (Response.Cookies(name).Path = path);
+		secure && (Response.Cookies(name).Secure = secure);
+	},
+
+	/// 删除Cookie
+	/// @param {String} Cookie名，省略时为删除全部
+	del : function(name) {
+		if (name) {
+			Response.Cookies($.config.prefix + name).Expires = "1/1/1980";
+		} else {
+			for (var i = 1, len = Request.Cookies.Count; i <= len; i++) {
+				Response.Cookies.Item(i).Expires = "1/1/1980";
+			}
+		}
 	}
+};
+
+// ---------------------------------------------------------------- */
+
+
+// ----------------------------------------------------------------
+// Session
+
+/// Session操作
+$.session = {
 	
+	/// 获取Session值
+	/// @param {String} Session名
+	/// @return {Mixed} Session值
+	get : function(name) {
+		return Session($.config.prefix + name);
+	},
+	
+	/// 设置Session
+	/// @param {String} Session名
+	/// @param {Mixed} Session值
+	set : function(name, value) {
+		Session($.config.prefix + name) = value;
+	},
+
+	///	清理Session
+	/// @param {String} Session名，省略时为清理全部
+	del : function(name) {
+		if (name) {
+			Session.Contents.Remove($.config.prefix + name);
+		} else {
+			Session.Contents.RemoveAll();
+		}
+	}
 };
 
 // ---------------------------------------------------------------- */

@@ -1,12 +1,14 @@
 <%
 /*
- *	SmartASP Library 0.1
+ *	Encrypt Module v0.1
+ *	of SmartASP Library v0.2
+ *
  *	http://code.google.com/p/smartasp/
  *
  *	Copyright (c) 2009 heero
  *	licensed under MIT license
  *
- *	Date: 2009-11-17
+ *	Date: 2009-11-26
  */
 
 
@@ -42,6 +44,7 @@ function safe_add(x, y) {
 function bit_rol(num, cnt) {
 	return (num << cnt) | (num >>> (32 - cnt));
 }
+
 
 // ----------------------------------------------------------------
 // SHA1
