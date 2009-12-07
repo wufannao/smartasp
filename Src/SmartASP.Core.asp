@@ -1,7 +1,7 @@
 <%@LANGUAGE="JAVASCRIPT" CODEPAGE="65001"%>
 <%
 /*
- *	Core Module v0.2
+ *	Core Module v0.2.1
  *	of SmartASP Library v0.2
  *
  *	http://code.google.com/p/smartasp/
@@ -9,7 +9,7 @@
  *	Copyright (c) 2009 heero
  *	licensed under MIT license
  *
- *	Date: 2009-11-26
+ *	Date: 2009-12-07
  */
 
 
@@ -67,7 +67,7 @@ $.getIp = function() {
 
 
 /// 标识版本
-$.version = "0.2 Build 20091126";
+$.version = "0.2.1 Build 20091126";
 
 
 /// 配置对象
@@ -219,26 +219,26 @@ $.convert = {
 	/// @return 转换后的日期，如果该字符串无法转换为日期或日期不合法，则返回undefined
 	toDate : function(value) {
 		if (reDateTime.test(value)) {
-			var year = parseInt(RegExp.$1), month = parseInt(RegExp.$2), day = RegExp.$3;
+			var year = Number(RegExp.$1), month = Number(RegExp.$2), day = RegExp.$3;
 				hour = RegExp.$4, minute = RegExp.$5, second = RegExp.$6;
 				
 			if (year < 1970 || month < 1 || month > 12) {
 				return;
 			}
 			if (day !== "") {
-				day = parseInt(day);
+				day = Number(day);
 				if (day < 1 || day > (new Date(year, month, 0)).getDate()) {
 					return;
 				}
 			}
 			
 			if (hour !== "" && minute !== "") {
-				hour = parseInt(hour); minute = parseInt(minute);
+				hour = Number(hour); minute = Number(minute);
 				if (hour < 0 || hour > 23 || minute < 0 || minute > 60) {
 					return;
 				}
 				if (second != "") {
-					second = parseInt(second);
+					second = Number(second);
 					if (second < 0 || second > 59) {
 						return;
 					}
