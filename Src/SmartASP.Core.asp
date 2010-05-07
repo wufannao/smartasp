@@ -6,10 +6,10 @@
  *
  *	http://code.google.com/p/smartasp/
  *
- *	Copyright (c) 2009 heero
+ *	Copyright (c) 2009-2010 heero
  *	licensed under MIT license
  *
- *	Date: 2009-12-07
+ *	Date: 2009/12/7
  */
 
 

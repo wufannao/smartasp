@@ -1,14 +1,14 @@
 <%
 /*
- *	Data Module v0.2
+ *	Data Module v0.2.1
  *	of SmartASP Library 0.2
  *
  *	http://code.google.com/p/smartasp/
  *
- *	Copyright (c) 2009 heero
+ *	Copyright (c) 2009-2010 heero
  *	licensed under MIT license
  *
- *	Date: 2009-11-29
+ *	Date: 2010/5/7
  */
 
 
@@ -210,7 +210,7 @@ $.data.DbHelper.prototype = {
 	///		@refer executeReader
 	/// @return {Array} JSON对象数组
 	executeJson : function(text, params, type) {
-		var rs = this.executeReader(text, type, isKeepParams), json;
+		var rs = this.executeReader(text, params, type), json;
 		return this.rsToJson(rs);
 	},
 	
